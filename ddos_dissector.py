@@ -49,6 +49,9 @@ NONE = -1
 ### Subrotines
 #------------------------------------------------------------------------------
 def parser_args():
+    """
+        Parse comamnd line parameters
+    """
 
     parser = argparse.ArgumentParser(prog=program_name, usage='%(prog)s [options]', epilog="Example: ./%(prog)s -f ./pcap_samples/sample1.pcap --summary --upload ", formatter_class=RawTextHelpFormatter)
     parser.add_argument("--version", help="print version and exit", action="store_true")
@@ -70,11 +73,17 @@ def parser_args():
 
 #------------------------------------------------------------------------------
 def signal_handler(sig, frame):
+    """
+        Signal handler
+    """
     print('Ctrl+C detected.')
     cursor.show()
     sys.exit(0)
 #------------------------------------------------------------------------------
 class CustomConsoleFormatter(logging.Formatter):
+    """
+        Log facility format
+    """
     def format(self, record):
         formater = "%(levelname)s - %(message)s"
         if record.levelno == logging.INFO:
@@ -353,7 +362,10 @@ def pcap_to_df(ret,filename):
 ## Function for calculating the TOP 'N' and aggregate the 'others'
 ## Create a dataframe with the top N values and create an 'others' category
 def top_n_dataframe(dataframe_field,top_n=20):
-    
+ 
+    """
+        Find top n values in one dataframe
+    """
     field_name = dataframe_field.name
 
     # ignore timestamp field
@@ -413,12 +425,10 @@ def animated_loading(msg="loading "):
     cursor.show()
 
 #------------------------------------------------------------------------------
-# Find fingerprint based on protocol and dataframe
-def find_fingerprint (df, protocol):
-
-    return 0
-#------------------------------------------------------------------------------
 def find_outlier(df):
+    """
+        Find outlier based in zscore
+    """
     data = top_n_dataframe(df)
 
     if (data.empty):
@@ -502,6 +512,9 @@ def infer_protocol_attack(df):
 #------------------------------------------------------------------------------
 def ip_src_fragmentation_attack_similarity(df,lst_attack_protocols,frag):
 
+    """
+        Find IP fragmentation attacks
+    """
     if (not frag):
         return False
 
@@ -537,7 +550,9 @@ def load_file(args):
 
 #------------------------------------------------------------------------------
 def inspect_smtp(df):
-
+    """
+        Inspect SMTP protocol
+    """
     attack_protocol = df_filtered['highest_protocol'].iloc[0]
     logger.info("Processing attack based on {}".format(attack_protocol))
 
@@ -556,7 +571,9 @@ def inspect_smtp(df):
 
 #------------------------------------------------------------------------------
 def inspect_ntp(df):
-
+    """
+        Inspect NTP protocol
+    """
     attack_protocol = df_filtered['highest_protocol'].iloc[0]
     logger.info("Processing attack based on {}".format(attack_protocol))
 
@@ -608,7 +625,9 @@ def inspect_harder(df_filtered,df_full):
 
 #------------------------------------------------------------------------------
 def inspect_dns(df_fingerprint):
-
+    """
+        Inspect DNS protocol
+    """
     attack_protocol = df_filtered['highest_protocol'].iloc[0]
     logger.info("Processing attack based on {}".format(attack_protocol))
 
@@ -626,27 +645,19 @@ def inspect_dns(df_fingerprint):
     return (fingerprint)
 
 #------------------------------------------------------------------------------
-def generate_dot_file(df,fingerprint,args,similarity=False):
-
-    df_fingerprint = df.loc[df[fingerprint.keys()].isin(fingerprint.values()).all(axis=1),:]
-    total_rows_matched  =  len(df.loc[df[fingerprint.keys()].isin(fingerprint.values()).all(axis=1), :])
-    total_ips_matched_using_fingerprint = df_fingerprint['ip_src'].unique().tolist()
-
-    if (similarity):
-
-        # SRC_IP from frag attack and generated fingerprint are very correlated.
-        # Here we add 'frag attack filter' to the matched dataframe to compute the match rate using both attacks (frag + fingerprint)
-        df_frag = df[(df['ip_dst'] == target_ip) & (df['fragmentation'] ==1) & (df['dstport'] ==0) & (df['ip_src'].isin(total_ips_matched_using_fingerprint))]
-        df_fingerprint = pd.concat([df_fingerprint,df_frag], ignore_index=True)
-        df_fingerprint = df_fingerprint.drop_duplicates(keep="first")
-
-
+def generate_dot_file(df_fingerprint, df):
+    """
+    Build .dot file that is used to generate a png file showing the
+    fingerprint match visualization
+    param: matched fingerprint
+    param: full dataframe raw
+    """
     # sum up dataframe to plot
     df_fingerprint = df_fingerprint[['ip_src','ip_dst']].drop_duplicates(keep="first")
     df_fingerprint['match'] = 1
-    df_remain = df[~df.ip_src.isin(df_fingerprint.ip_src.tolist())][['ip_src','ip_dst']].drop_duplicates(keep="first")
-    df_remain['match'] = 0
 
+    df_remain = df[['ip_src','ip_dst']].drop_duplicates(keep="first")
+    df_remain['match'] = 0
     df_plot = pd.concat([df_fingerprint,df_remain], ignore_index=True)
 
     # anonymize plot data
@@ -669,21 +680,15 @@ def generate_dot_file(df,fingerprint,args,similarity=False):
     print ("\t sfdp -x -Goverlap=scale -Tpng {}.dot  > {}.png".format(filename,filename))
 #    print ("\t convert {}.png  -gravity North   -background YellowGreen  -splice 0x18 -annotate +0+2 'Dissector'  {}.gif ".format(filename,filename))
 
-
-#------------------------------------------------------------------------------
-def entropy(x, bins=None):
-    N   = x.shape[0]
-    if bins is None:
-        counts = np.bincount(x)
-    else:
-        counts = np.histogram(x, bins=bins)[0] # 0th idx is counts
-    p   = counts[np.nonzero(counts)]/N # avoids log(0)
-    H   = -np.dot( p, np.log2(p) )
-    return H 
-
 #------------------------------------------------------------------------------
 def printProgressBar(value,label,fill_chars="■-"):
-
+    """
+        Print progress bar 
+        param: value to be printed
+        param: label used as title
+    """
+    if (args.quiet):
+        return True
     n_bar = 40 #size of progress bar
     max = 100
     j= value/max
@@ -698,7 +703,12 @@ def printProgressBar(value,label,fill_chars="■-"):
 
 #------------------------------------------------------------------------------
 def filter_fingerprint(df,fingerprint,similarity=False):
-
+    """
+        Use the generated fingerprint to filter the traffic in the dataframe.
+        param: df, full dataframe
+        param: fingerprint dic generated 
+        param: similarity used to add IP fragmentation attacks to the filtered dataframe
+    """
     # filter full DF using the built fingerprint filter
     df_fingerprint = df
     for key, value in fingerprint.items():
@@ -720,8 +730,7 @@ def filter_fingerprint(df,fingerprint,similarity=False):
 #------------------------------------------------------------------------------
 def evaluate_fingerprint(df,df_fingerprint,fingerprint):
 
-    # filter full DF using the built fingerprint
-    total_rows_matched  =  len(df_fingerprint)
+    total_rows_matched = len(df_fingerprint)
     total_ips_matched_using_fingerprint = df_fingerprint['ip_src'].unique().tolist()
 
     logger.info("TRAFFIC MATCHED: {0}%. The generated fingerprint will filter {0}% of the analysed traffic".format(round(len(df_fingerprint)*100/len(df))))
@@ -746,7 +755,7 @@ def evaluate_fingerprint(df,df_fingerprint,fingerprint):
              results.update( {key: percentage} )
          results_sorted = {k: v for k, v in sorted(results.items(), key=lambda item: item[1],  reverse=True)}
  
-         logger.info("          ================ FIELDS COVERAGE ================ ")
+         logger.info("          =============== FIELDS BREAKDOWN ================ ")
          for label, percentage in results_sorted.items():
              printProgressBar(percentage,label,"▭ ")
     accuracy_ratio = round(len(df_fingerprint)*100/len(df))
@@ -756,6 +765,9 @@ def evaluate_fingerprint(df,df_fingerprint,fingerprint):
 #------------------------------------------------------------------------------
 def check_repository(config):
 
+    """
+        Check repository access and credentials
+    """
     logger.info("Checking repository")
     url = "https://raw.githubusercontent.com/ddos-clearing-house/ddos_dissector/2.0/repository.txt"
     response = requests.get(url)
@@ -819,6 +831,9 @@ def check_repository(config):
 #------------------------------------------------------------------------------
 def inspect_generic(df):
 
+    """
+        Inspect generic protocol
+    """
     attack_protocol = df_filtered['highest_protocol'].iloc[0]
     logger.info("Processing attack based on {}".format(attack_protocol))
 
@@ -838,8 +853,10 @@ def inspect_generic(df):
     return (fingerprint)
 
 #------------------------------------------------------------------------------
-# plot ascii stats bar
 def bar(row):
+    """
+        Plot ASCII bar 
+    """
     percent = int(row['percent'])
     bar_chunks, remainder = divmod(int(percent * 8 / increment), 8)
     count = str(row['counts'])
@@ -856,40 +873,45 @@ def bar(row):
 
 #------------------------------------------------------------------------------
 def add_label(fingerprint,df):
+    """
+       Add labels to fingerprint generated
+    """
     label = []
-
+    
     # Based on FBI Flash Report MU-000132-DD
     df_length = (df.groupby(['srcport'])['udp_length'].max()).reset_index()
     if (len(df_length.udp_length>468)):
         label.append("UDP_SUSPECT_LENGTH")
 
     my_dict = {
-        1121: 'Memcached',
-        1194: 'OpenVPN', 
-        123:  'NTP',
-        1434: 'SQL server',
-        1718: 'H323',
-        1900: 'SSDP', 
+        25:    'SMTP',
+        123:   'NTP',
+        1121:  'Memcached',
+        1194:  'OpenVPN', 
+        1434:  'SQL server',
+        1718:  'H323',
+        1900:  'SSDP', 
+        3074:  'Game Server',
+        3283:  'Apple Remote Desktop',
+        3702:  'WSD - Web Services Discovery', 
+        5683:  'CoAP',
         20800: 'Game Server',
-        25:   'SMTP',
         27015: 'Game Server',
         30718: 'IoT Lantronix',
-        3074: 'Game Server',
-        3283: 'Apple Remote Desktop',
         33848: 'Jenkins Server',
-        3702: 'WSD - Web Services Discovery', 
         37810: 'DVR DHCPDiscover',
         47808: 'BACnet', 
-        5683: 'CoAP',
     }
 
     for port in my_dict:
-        if (fingerprint['srcport'] == [port]):
-            label.append("AMPLIFICATION")
-            label.append(my_dict[port])
+        if ("srcport" in fingerprint):
+            if (fingerprint['srcport'] == [port]):
+                label.append("AMPLIFICATION")
+                label.append(my_dict[port])
     try:
-        if (fingerprint['srcport'] == [53]) and ('dns_qry_name' in fingerprint) :
-            label.append("DNS")
+        if ("srcport" in fingerprint):
+            if (fingerprint['srcport'] == [53]) and ('dns_qry_name' in fingerprint) :
+                label.append("DNS")
     except:
        pass
 
@@ -902,7 +924,7 @@ def logo():
  _____  _____        _____ _____  ____  
 |  __ \|  __ \      / ____|  __ \|  _ \ 
 | |  | | |  | | ___| (___ | |  | | |_) |
-| |  | | |  | |/ _ \\___ \| |  | |  _ < 
+| |  | | |  | |/ _ \\\___ \| |  | |  _ < 
 | |__| | |__| | (_) |___) | |__| | |_) |
 |_____/|_____/ \___/_____/|_____/|____/ 
 ''')
@@ -1008,18 +1030,19 @@ if __name__ == '__main__':
             logger.info("ATTACK TYPE: GENERIC")
             fingerprint = inspect_generic(df_filtered)
 
-        if (args.graph): generate_dot_file(df,fingerprint,args,similarity)
 
         ## return dataframe filtered
         df_fingerprint = filter_fingerprint(df,fingerprint,similarity)
 
         # infer tags based on the generated fingerprint
         labels = add_label(fingerprint,df_fingerprint)
-        fingerprint.update( {"tags": labels} )
+        fingerprint.update({"tags": labels})
 
         print ("Generated fingerprint: ")
         json_str = json.dumps(fingerprint, indent=4, sort_keys=True)
         print(highlight(json_str, JsonLexer(), TerminalFormatter()))
+
+        if (args.graph): generate_dot_file(df_fingerprint, df)
 
         if (args.summary):
             # evaluate fingerprint generated

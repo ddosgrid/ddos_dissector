@@ -9,7 +9,13 @@
 [![GitHub Issues](https://img.shields.io/github/issues/ddos-clearing-house/ddos_dissector)](https://github.com/ddos-clearing-house/ddos_dissector/issues)
 ![Contributions welcome](https://img.shields.io/badge/contributions-welcome-orange.svg)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-<img alt="GitHub commits since tagged version" src="https://img.shields.io/github/commits-since/ddos-clearing-house/ddos_dissector/3.0.0">
+<img alt="GitHub commits since tagged version" src="https://img.shields.io/github/last-commit/ddos-clearing-house/ddos_dissector">
+
+ <p align="center">
+  <img width=30.5% src="https://github.com/ddos-clearing-house/dddosdb-in-a-box/blob/master/imgs/concordia-logo.png?raw=true">
+ <p align="center"><img width=30.5% src="https://github.com/ddos-clearing-house/dddosdb-in-a-box/blob/master/imgs/No-More-DDoS-2-removebg-preview.png?raw=true"></p>
+
+</p>
 
 ## Overview
 
@@ -86,9 +92,12 @@ We do provide some pcap samples. Check the directory *pcap_samples*. Note, you c
  _____  _____        _____ _____  ____
 |  __ \|  __ \      / ____|  __ \|  _ \
 | |  | | |  | | ___| (___ | |  | | |_) |
-| |  | | |  | |/ _ \___ \| |  | |  _ <
+| |  | | |  | |/ _ \\___ \| |  | |  _ <
 | |__| | |__| | (_) |___) | |__| | |_) |
 |_____/|_____/ \___/_____/|_____/|____/
+
+Upload using configuration file [ddosdb.conf]
+usage: ddos_dissector.py [options]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -96,17 +105,20 @@ optional arguments:
   -v, --verbose         print info msg
   -d, --debug           print debug info
   -q, --quiet           ignore animation
-  --status              ignore animation
-  -s, --summary         ignore animation
+  --status              check available repositories
+  -s, --summary         present fingerprint evaluation summary
   -u, --upload          upload to the selected repository
   --log [LOG]           Log filename. Default =./log.txt"
-  --config [CONFIG]     Configuration File. Default =./log.txt"
+  --config [CONFIG]     Configuration File. Default =./ddosdb.conf"
+  --host [HOST]         Upload host.
+  --user [USER]         repository user.
+  --passwd [PASSWD]     repository password.
   -g, --graph           build dot file (graphviz). It can be used to plot a visual representation
                          of the attack using the tool graphviz. When this option is set, youn will
                          received information how to convert the generate file (.dot) to image (.png).
   -f [FILENAME], --filename [FILENAME]
 
-Example: ./ddos_dissector.py -f attack.pcap --summary --upload
+Example: ./ddos_dissector.py -f ./pcap_samples/sample1.pcap --summary --upload
 
 Input file not provided. Use '-f' for that.
 ````
@@ -118,15 +130,12 @@ Input file not provided. Use '-f' for that.
 ./ddos_dissector.py -f pcap_samples/sample1.pcap --verbose [provide details about the pcap processing]
 ./ddos_dissector.py -f pcap_samples/sample1.pcap -g        [generate a .dot file used to represent a graphical visualization]
 ```
-<details>
-  <summary>Graphical visualization</summary>
-  
+
+<p align="center"><img width=80% border=2 src="https://github.com/ddos-clearing-house/ddos_dissector/blob/3.0/media/dot2.gif?raw=true"></p>
+
 - Green: benign traffic
 - Red:  malicious traffic 
  
-<p align="center"><img width=50% src="https://github.com/joaoceron/new_dissector/blob/master/media/booter6-chargen.jpg"></p>
-
-</details>
 
 
 
