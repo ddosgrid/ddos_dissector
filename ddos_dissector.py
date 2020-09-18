@@ -180,10 +180,13 @@ def upload(pcap, fingerprint, labels, df_fingerprint, user,passw,host):
     with open(json_file, 'w') as f_fingerprint:
         json.dump(fingerprint, f_fingerprint)
 
+    print("PCAP to upload")
+    print(pcap)
+
     files = {
         "json": open(json_file, "rb"),
         # ignoring pcap file upload for now
-        "pcap": open(json_file, "rb"),
+        "pcap": open(pcap, "rb"),
     }
 
     # build headers for repo fingerprint submission
