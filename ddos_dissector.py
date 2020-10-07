@@ -173,7 +173,8 @@ def upload(pcap, fingerprint, labels, df_fingerprint, user,passw,host):
     fingerprint.update( {"total_packets": len(df_fingerprint)} )
 
     # keys used on the repository
-    key = str(hashlib.md5(str(fingerprint).encode()).hexdigest())
+    # key = str(hashlib.md5(str(fingerprint).encode()).hexdigest())
+    key = determine_sha256_of_pcap(pcap)
     fingerprint.update( {"key": key} )
     fingerprint.update( {"multivector_key": key} )
 
@@ -221,6 +222,15 @@ def upload(pcap, fingerprint, labels, df_fingerprint, user,passw,host):
         print ("Upload success: \n\tHTTP CODE [{}] \n\tFingerprint ID [{}]".format(r.status_code,key))
         print ("\tURL: {}query?q={}".format(host,key))
     return r.status_code
+
+#------------------------------------------------------------------------------
+def determine_sha256_of_pcap(pcap):
+    sha256_hash = hashlib.sha256()
+    with open(pcap, "rb") as f:
+        # Read and update hash string value in blocks of 4K
+        for byte_block in iter(lambda: f.read(4096),b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
 
 #------------------------------------------------------------------------------
 def get_repository(args,config):
