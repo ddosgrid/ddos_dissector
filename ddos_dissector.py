@@ -64,6 +64,7 @@ def parser_args():
     parser.add_argument("--log", default='log.txt', nargs='?',help="Log filename. Default =./log.txt\"")
     parser.add_argument("--config", default='ddosdb.conf', nargs='?',help="Configuration File. Default =./ddosdb.conf\"")
     parser.add_argument("--host", nargs='?',help="Upload host. ")
+    parser.add_argument("--authtoken", nargs='?',help="Access Token as issues by OAuth2 server")
     parser.add_argument("--user", nargs='?',help="repository user. ")
     parser.add_argument("--passwd", nargs='?',help="repository password. ")
     parser.add_argument("-g","--graph", help="build dot file (graphviz). It can be used to plot a visual representation\n of the attack using the tool graphviz. When this option is set, youn will\n received information how to convert the generate file (.dot) to image (.png).", action="store_true")
@@ -146,9 +147,49 @@ def logger(args):
     logger.addHandler(file_handler)
 
     return logger
+#------------------------------------------------------------------------------
+
+def upload_using_password(pcap, fingerprint, labels, df_fingerprint, user, passw, host):
+    """
+    Upload a fingerprint and attack vector to DDoSDB
+    :param pcap: Path to the pcap file
+    :param fingerprint: Path to the fingerprint file
+    :param username: DDoSDB username
+    :param password: DDoSDB password
+    :param key: ID to identify this attack, also the filename of the pcap_file.
+    :return:
+    """
+    # build headers for repo fingerprint submission
+    key = determine_sha256_of_pcap(pcap)
+    headers = {
+        "X-Username": user,
+        "X-Password": passw,
+        "X-Filename": key
+    }
+    url = host+"upload-file"
+    return upload(pcap, fingerprint, labels, df_fingerprint, headers, url)
+#------------------------------------------------------------------------------
+
+def upload_using_token(pcap, fingerprint, labels, df_fingerprint, authtoken, host):
+    """
+    Upload a fingerprint and attack vector to DDoSDB
+    :param pcap: Path to the pcap file
+    :param fingerprint: Path to the fingerprint file
+    :param authtoken: DDoSDB access token issued by OAuth2 server
+    :param key: ID to identify this attack, also the filename of the pcap_file.
+    :return:
+    """
+    key = determine_sha256_of_pcap(pcap)
+    headers = {
+        "X-Filename": key,
+        "Authorization": "Bearer " + authtoken
+    }
+    
+    url = host+"api/upload-file"
+    return upload(pcap, fingerprint, labels, df_fingerprint, headers, url)
 
 #------------------------------------------------------------------------------
-def upload(pcap, fingerprint, labels, df_fingerprint, user,passw,host):
+def upload(pcap, fingerprint, labels, df_fingerprint, headers, url):
     """
     Upload a fingerprint and attack vector to DDoSDB
     :param pcap: Path to the pcap file
@@ -199,15 +240,8 @@ def upload(pcap, fingerprint, labels, df_fingerprint, user,passw,host):
         "pcap": open(pcap, "rb"),
     }
 
-    # build headers for repo fingerprint submission
-    headers = {
-        "X-Username": user,
-        "X-Password": passw,
-        "X-Filename": key
-    }
-
     try:
-        r = requests.post(host+"upload-file", files=files, headers=headers,verify=True)
+        r = requests.post(url, files=files, headers=headers,verify=True)
     except requests.exceptions.RequestException as e:  
         logger.critical("Cannot connect to the server to upload fingerprint")
         logger.debug("Cannot connect to the server to upload fingerprint: {}".format(e))
@@ -1058,10 +1092,14 @@ if __name__ == '__main__':
             # evaluate fingerprint generated
             accuracy_ratio = evaluate_fingerprint(df,df_fingerprint,fingerprint)
 
-        if (args.upload):
+        if (args.upload and not args.authtoken):
             (user,passw,host) = get_repository(args,config)
             # upload to the repository
-            ret = upload(args.filename, fingerprint, labels, df_fingerprint, user,passw,host)
+            ret = upload_using_password(args.filename, fingerprint, labels, df_fingerprint, user, passw, host)
+
+        if (args.upload and args.authtoken):
+            (user,passw,host) = get_repository(args,config)
+            ret = upload_using_token(args.filename, fingerprint, labels, df_fingerprint, args.authtoken, host)
 
     sys.exit(0)
 
