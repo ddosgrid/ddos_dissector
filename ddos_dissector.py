@@ -227,7 +227,8 @@ def upload(pcap, fingerprint, labels, df_fingerprint, headers, url):
        fingerprint.update( {"attackers": df_fingerprint['ip_src'].unique().tolist()} )
 
     # save fingerprint to local file in order to enable the upload via POST
-    json_file = "{}.json".format(key)
+    json_file_base_path = os.path.splitext(pcap)[0]
+    json_file = "{}.json".format(json_file_base_path)
     with open(json_file, 'w') as f_fingerprint:
         json.dump(fingerprint, f_fingerprint)
 
